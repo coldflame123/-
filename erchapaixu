@@ -1,0 +1,181 @@
+#include<iostream>
+using namespace std;
+
+typedef struct BSTnode {
+	int data;
+	struct BSTnode* lchild, * rchild;
+}BSTnode, * BSTtree;
+
+void InitBSTtree(BSTtree& T);//初始化二叉排序树
+int insertBSTnode(BSTtree& T, int key);//插入结点
+void buildBSTtree(BSTtree& T, int a[], int n);//输入数组建立二叉排序树
+BSTnode* findBSTnode(BSTtree T, int key);//递归查找结点
+BSTnode* _findBSTnode(BSTtree T, int key);//非递归查找结点
+BSTnode* findfather(BSTtree T, BSTnode* p);//查找结点的父节点
+BSTnode* findleft_low(BSTtree T);//查找最左下结点
+void visit(BSTtree T);
+void mid_order(BSTtree T);//中序遍历
+void deleteBSTnode(BSTtree& T, int key);//删除结点
+
+
+int main() {
+	BSTtree T;
+	InitBSTtree(T);
+	int a[10] = { 50,20,30,10,60,70,35,25 };
+	/*树结构			  50
+				  20		60
+				10  30			70
+					25  35
+	*/
+	buildBSTtree(T, a, 8);
+	mid_order(T);
+	if (BSTnode* p = _findBSTnode(T, 60)) {
+		cout << endl << "查找成功" << endl;
+		cout << p->data << endl;
+	}if (BSTnode* p = findBSTnode(T, 25)) {
+		cout << endl << "查找成功" << endl;
+		cout << p->data << endl;
+	}
+	deleteBSTnode(T, 20);
+	mid_order(T);
+	return 0;
+}
+//初始化二叉排序树
+void InitBSTtree(BSTtree& T) {
+	T = NULL;
+}
+
+//插入结点
+//原来，书上的代码是要求，有相同的结点后，就不插入了
+int insertBSTnode(BSTtree& T, int key) {
+	if (T == NULL) {
+		T = new BSTnode;
+		T->data = key;
+		T->lchild = T->rchild = NULL;
+		return 1;
+	}
+	if (T->data == key)
+		return 0;
+	else if (key <= T->data) {//应该插在左孩子
+		insertBSTnode(T->lchild, key);
+	}
+	else
+		insertBSTnode(T->rchild, key);
+}
+
+//根据传入数组，建立二叉排序树
+void buildBSTtree(BSTtree& T, int a[], int n) {
+	for (int i = 0; i < n; i++) {
+		insertBSTnode(T, a[i]);
+	}
+}
+
+//查找结点，递归
+BSTnode* findBSTnode(BSTtree T, int key) {
+	if (T == NULL)
+		return T;
+	if (T->data == key)
+		return T;
+	else if (key <= T->data)
+		findBSTnode(T->lchild, key);
+	else
+		findBSTnode(T->rchild, key);
+}
+
+//非递归查找结点
+BSTnode* _findBSTnode(BSTtree T, int key) {
+	BSTnode* p = T;
+	while (p != NULL && p->data != key) {
+		if (key <= p->data)
+			p = p->lchild;
+		else
+			p = p->rchild;
+	}
+	return p;
+}
+
+//中序遍历输出
+void visit(BSTtree T) {
+	cout << T->data << " ";
+}
+void mid_order(BSTtree T) {
+	if (T != NULL) {
+		mid_order(T->lchild);
+		visit(T);
+		mid_order(T->rchild);
+	}
+}
+
+//返回结点的父节点,条件&&忘记了，就错误了
+BSTnode* findfather(BSTtree T, BSTnode* p) {
+	if (T == NULL)
+		return NULL;
+	while (T->lchild != p && T->rchild != p) {
+		if (p->data <= T->data)
+			T = T->lchild;
+		else
+			T = T->rchild;
+	}
+	return T;
+}
+
+//找到最左下结点
+BSTnode* findleft_low(BSTtree T) {
+	BSTnode* p = T;
+	while (p->lchild != NULL)
+		p = p->lchild;
+	return p;
+}
+
+//删除结点
+void deleteBSTnode(BSTtree& T, int key) {
+	BSTnode* p = _findBSTnode(T, key);//p是要删除的结点
+	if (p == NULL)
+		cout << "不存在" << endl;
+	//叶结点，直接删除
+	else if (p->lchild == NULL && p->rchild == NULL) {
+		BSTnode* s = findfather(T, p);//p的父节点
+		if (s->lchild == p)//直接删除
+			s->lchild = NULL;
+		else
+			s->rchild = NULL;
+		delete p;
+	}
+	//左右子树只有一个，子树提上来就可以
+	else if (p->lchild == NULL) {//右子树不空
+		BSTnode* s = p->rchild;
+		BSTnode* k = findfather(T, p);
+		if (k->lchild == p)//p在父节点的右子树				
+			k->lchild = s;
+		else
+			k->rchild = s;
+		delete p;
+	}
+	else if (p->rchild == NULL) {//左子树不空
+		BSTnode* s = p->lchild;
+		BSTnode* k = findfather(T, p);
+		if (k->lchild == p)//p在父节点的右子树				
+			k->lchild = s;
+		else
+			k->rchild = s;
+	}
+	else {//左右子树都不空，找中序后继代替
+		BSTnode* s = findleft_low(p->lchild);
+		//因为s为最左下结点，所以s的左子树为空，右子树空或不空
+		//p->data = s->data;接下来相当于删除s结点
+		//先复制数值的话，在删除结点时，就可能把p删掉
+		if (s->rchild == NULL) {//右子树空，直接删除就可以
+			BSTnode* k = findfather(T, s);
+			//s一定是k的左节点
+			k->lchild = NULL;
+		}
+		else {
+			//右子树不空，直接子树提上来
+			BSTnode* k = findfather(T, s);
+			k->lchild = s->rchild;
+		}
+		p->data = s->data;
+		delete s;
+	}
+
+}
